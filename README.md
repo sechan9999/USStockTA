@@ -49,7 +49,7 @@ This app fetches real-time and historical market data using `yfinance` to displa
    ```
 
 5. **Open in browser:**
-   Navigate to `http://localhost:5000`   https://sechan9999.github.io/USStockTA/
+   Navigate to `http://localhost:5000`   https://us-stock-ta2.vercel.app/
 
 ## Tech Stack
 - **Frontend**: Vanilla JavaScript (ES6+), CSS3 Variables, HTML5, [Lightweight Charts](https://github.com/tradingview/lightweight-charts)
