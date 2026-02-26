@@ -66,52 +66,57 @@ def get_stock():
     period   = request.args.get("period",   "6mo")
 
     try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        hist   = ticker.history(period=period, interval=interval, auto_adjust=True)
-        info   = ticker.fast_info          # faster than .info
-
-        if hist is None or hist.empty:
+        # 1. Fetch data directly from Yahoo Finance API (Bypasses yfinance library issues on Vercel)
+        url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range={period}&includePrePost=false"
+        
+        # We need headers mimicking a real browser to prevent Yahoo from returning 403 Forbidden
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
+        }
+        res = requests.get(url, headers=headers, timeout=10)
+        
+        # Try a fallback url if query2 fails
+        if not res.ok:
+            url_fallback = url.replace("query2", "query1")
+            res = requests.get(url_fallback, headers=headers, timeout=10)
+            res.raise_for_status()
+            
+        data = res.json()
+        if data.get("chart", {}).get("error"):
+            return jsonify({"error": data["chart"]["error"]["description"]}), 404
+            
+        result = data["chart"]["result"][0]
+        timestamps = result.get("timestamp", [])
+        
+        if not timestamps:
             return jsonify({"error": f"No data found for '{symbol}'. Check the ticker."}), 404
 
-        # Remove timezone from index for clean timestamps
-        hist.index = hist.index.tz_localize(None) if hist.index.tzinfo is None else hist.index.tz_convert(None)
-
-        # Build response
-        timestamps = [int(t.timestamp()) for t in hist.index]
-        opens   = [safe(v) for v in hist["Open"]]
-        highs   = [safe(v) for v in hist["High"]]
-        lows    = [safe(v) for v in hist["Low"]]
-        closes  = [safe(v) for v in hist["Close"]]
-        volumes = [safe_int(v) for v in hist["Volume"]]
-
-        # Meta — use fast_info first, fall back gracefully
-        price    = safe(getattr(info, "last_price",            None)) or closes[-1]
-        prev     = safe(getattr(info, "previous_close",        None)) or closes[-2]
-        mktcap   = safe(getattr(info, "market_cap",            None))
-        h52      = safe(getattr(info, "year_high",             None))
-        l52      = safe(getattr(info, "year_low",              None))
-        shares   = safe(getattr(info, "shares",                None))
-
-        # Try slower .info for extra fields (PE, beta, name)
-        slow = {}
-        try:
-            slow = ticker.info or {}
-        except Exception:
-            pass
+        quote = result["indicators"]["quote"][0]
+        m = result["meta"]
+        
+        opens   = [safe(v) for v in quote.get("open", [])]
+        highs   = [safe(v) for v in quote.get("high", [])]
+        lows    = [safe(v) for v in quote.get("low", [])]
+        closes  = [safe(v) for v in quote.get("close", [])]
+        volumes = [safe_int(v) for v in quote.get("volume", [])]
 
         meta = {
             "symbol":              symbol,
-            "longName":            slow.get("longName") or slow.get("shortName") or symbol,
-            "regularMarketPrice":  price,
-            "previousClose":       prev,
-            "marketCap":           mktcap,
-            "fiftyTwoWeekHigh":    h52,
-            "fiftyTwoWeekLow":     l52,
-            "trailingPE":          safe(slow.get("trailingPE")),
-            "beta":                safe(slow.get("beta")),
-            "dividendYield":       safe(slow.get("dividendYield")),
-            "sector":              slow.get("sector", ""),
-            "industry":            slow.get("industry", ""),
+            "longName":            m.get("longName") or m.get("shortName") or symbol,
+            "regularMarketPrice":  m.get("regularMarketPrice") or closes[-1],
+            "previousClose":       m.get("previousClose") or m.get("chartPreviousClose") or closes[-1],
+            "marketCap":           None, # Fast API doesn't have marketCap unfortunately, avoiding extra calls to prevent IP ban
+            "fiftyTwoWeekHigh":    None,
+            "fiftyTwoWeekLow":     None,
+            "trailingPE":          None,
+            "beta":                None,
+            "dividendYield":       None,
+            "sector":              "",
+            "industry":            ""
         }
 
         return jsonify({
