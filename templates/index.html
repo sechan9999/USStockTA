@@ -865,14 +865,55 @@
         const IND = { sma20: true, sma50: true, ema20: false, ema50: false, bb: true, vwap: false };
         let charts = {}, series = {};
 
-        // ─── DATA FETCH ───────────────────────────────────────────
         async function fetchData(symbol, interval, range) {
-            const r = await fetch(`/api/stock?symbol=${symbol}&interval=${interval}&period=${range}`);
-            if (!r.ok) {
-                const errorData = await r.json();
-                throw new Error(errorData.error || 'Failed to fetch data');
+            // 1. Try to fetch from our Flask Backend (Vercel)
+            try {
+                const r = await fetch(`/api/stock?symbol=${symbol}&interval=${interval}&period=${range}`);
+                if (r.ok) {
+                    const data = await r.json();
+                    if (data && data.timestamps && data.timestamps.length > 0) {
+                        return data; // Success!
+                    }
+                }
+            } catch (e) {
+                console.warn("Backend fetch failed or was blocked. Falling back to client-side.", e);
             }
-            return await r.json();
+
+            // 2. Fallback: Client-side fetch directly from Yahoo Finance via proxy (Bypasses Vercel IP Block)
+            console.log("Vercel Backend blocked by Yahoo. Falling back to direct browser fetch...");
+            const base = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${interval}&range=${range}&includePrePost=false`;
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+                `https://corsproxy.io/?${encodeURIComponent(base)}`,
+                base
+            ];
+
+            let lastErr;
+            for (const url of proxies) {
+                try {
+                    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                    if (!r.ok) continue;
+                    const j = await r.json();
+                    if (j.chart?.error) throw new Error(j.chart.error.description);
+                    if (!j.chart?.result?.[0]) continue;
+
+                    const res = j.chart.result[0];
+                    const q = res.indicators.quote[0];
+
+                    // Adapt Yahoo's native format to exactly match our Flask API format!
+                    return {
+                        symbol: symbol,
+                        meta: res.meta,
+                        timestamps: res.timestamp,
+                        open: q.open || [],
+                        high: q.high || [],
+                        low: q.low || [],
+                        close: q.close || [],
+                        volume: q.volume || []
+                    };
+                } catch (e) { lastErr = e; }
+            }
+            throw lastErr || new Error('Both the Server Backend and Client Fallback failed to fetch data.');
         }
 
         // ─── TECHNICAL INDICATORS ─────────────────────────────────
