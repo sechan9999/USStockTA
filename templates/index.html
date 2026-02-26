@@ -1016,6 +1016,10 @@
 
         function destroyCharts() {
             ['main', 'rsi', 'macd', 'stoch'].forEach(k => { if (charts[k]) { charts[k].remove(); delete charts[k]; } });
+            ['main-chart', 'rsi-chart', 'macd-chart', 'stoch-chart'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
             series = {};
         }
 
