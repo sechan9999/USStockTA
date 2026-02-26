@@ -9,8 +9,25 @@ import yfinance as yf
 import numpy as np
 import os
 import os.path
+import tempfile
 from openai import OpenAI
 import json
+import requests
+
+# Set yfinance cache directory to /tmp to prevent Vercel's read-only error
+yf_cache_dir = os.path.join(tempfile.gettempdir(), 'yfinance_cache')
+os.makedirs(yf_cache_dir, exist_ok=True)
+try:
+    yf.set_tz_cache_location(yf_cache_dir)
+except AttributeError:
+    pass
+
+# Setup a session with a real browser User-Agent to prevent Yahoo from blocking the request
+yf_session = requests.Session()
+yf_session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+})
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -49,7 +66,7 @@ def get_stock():
     period   = request.args.get("period",   "6mo")
 
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=yf_session)
         hist   = ticker.history(period=period, interval=interval, auto_adjust=True)
         info   = ticker.fast_info          # faster than .info
 
@@ -119,6 +136,8 @@ def search_ticker():
     if not q:
         return jsonify([])
     try:
+        # Avoid yf.Search because it might crash with default session on vercel
+        # but yfinance doesn't easily let us pass a session to Search. We'll try just the Ticker approach
         res = yf.Search(q, max_results=6)
         quotes = res.quotes or []
         return jsonify([
