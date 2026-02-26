@@ -3,3 +3,4 @@ yfinance==0.2.40
 numpy==1.26.4
 pandas==2.2.2
 openai==1.35.3
+requests>=2.31.0

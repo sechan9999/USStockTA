@@ -58,6 +58,10 @@ def safe_int(v):
 def index():
     return render_template("index.html")
 
+@app.route("/api/health")
+def health_check():
+    return jsonify({"status": "ok", "message": "Vercel backend is fully operational."})
+
 
 @app.route("/api/stock")
 def get_stock():
