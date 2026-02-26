@@ -4,28 +4,1495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="0; url=https://us-stock-ta2.vercel.app/" />
-    <title>US Stock Technical Analyzer - Redirect</title>
+    <title>US Stock Technical Analyzer</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        body {
-            font-family: sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
-            text-align: center;
-            margin-top: 50px;
+        :root {
+            --bg0: #0d1117;
+            --bg1: #161b22;
+            --bg2: #21262d;
+            --border: #30363d;
+            --txt1: #e6edf3;
+            --txt2: #8b949e;
+            --blue: #58a6ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --orange: #e3b341;
+            --purple: #bc8cff;
         }
 
-        a {
-            color: #58a6ff;
-            text-decoration: none;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg0);
+            color: var(--txt1);
+            min-height: 100vh;
+            font-size: 13px;
+        }
+
+        /* ─── HEADER ─── */
+        .hdr {
+            background: var(--bg1);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 800;
+            white-space: nowrap;
+            letter-spacing: -0.5px;
+        }
+
+        .logo em {
+            color: var(--blue);
+            font-style: normal;
+        }
+
+        .logo span {
+            color: var(--green);
+        }
+
+        .search-wrap {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+            max-width: 380px;
+        }
+
+        #ticker-input {
+            flex: 1;
+            padding: 7px 12px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--txt1);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            outline: none;
+            transition: border .2s;
+        }
+
+        #ticker-input:focus {
+            border-color: var(--blue);
+        }
+
+        .btn-analyze {
+            padding: 7px 16px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: opacity .2s;
+        }
+
+        .btn-analyze:hover {
+            opacity: .82;
+        }
+
+        .quick-tickers {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+        }
+
+        .qt {
+            padding: 4px 9px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--txt2);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all .18s;
+        }
+
+        .qt:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        /* ─── MAIN ─── */
+        .main {
+            padding: 14px 18px;
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+
+        /* ─── INFO BAR ─── */
+        .info-bar {
+            background: var(--bg1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .info-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .info-symbol {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .info-name {
+            color: var(--txt2);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .info-price {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .info-chg {
+            font-size: 13px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .chg-up {
+            background: rgba(63, 185, 80, .15);
+            color: var(--green);
+        }
+
+        .chg-dn {
+            background: rgba(248, 81, 73, .15);
+            color: var(--red);
+        }
+
+        .metrics {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .ml {
+            font-size: 10px;
+            color: var(--txt2);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .mv {
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ─── CONTROLS ─── */
+        .ctrl-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tf-group {
+            display: flex;
+            gap: 3px;
+            background: var(--bg1);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px;
+        }
+
+        .tf {
+            padding: 4px 11px;
+            border: none;
+            background: transparent;
+            color: var(--txt2);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all .18s;
+        }
+
+        .tf.on {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .tf:hover:not(.on) {
+            background: var(--bg2);
+            color: var(--txt1);
+        }
+
+        .ind-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .ind-btn {
+            padding: 4px 11px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--txt2);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all .18s;
+        }
+
+        .ind-btn[data-i="sma20"].on {
+            background: rgba(100, 210, 255, .2);
+            border-color: #64d2ff;
+            color: #64d2ff;
+        }
+
+        .ind-btn[data-i="sma50"].on {
+            background: rgba(255, 165, 0, .2);
+            border-color: orange;
+            color: orange;
+        }
+
+        .ind-btn[data-i="ema20"].on {
+            background: rgba(255, 100, 180, .2);
+            border-color: #ff64b4;
+            color: #ff64b4;
+        }
+
+        .ind-btn[data-i="ema50"].on {
+            background: rgba(188, 140, 255, .2);
+            border-color: var(--purple);
+            color: var(--purple);
+        }
+
+        .ind-btn[data-i="bb"].on {
+            background: rgba(255, 215, 0, .2);
+            border-color: gold;
+            color: gold;
+        }
+
+        .ind-btn[data-i="vwap"].on {
+            background: rgba(100, 255, 180, .2);
+            border-color: #64ffb4;
+            color: #64ffb4;
+        }
+
+        .chart-type-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .ct-btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--txt2);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all .18s;
+        }
+
+        .ct-btn.on {
+            background: var(--bg2);
+            color: var(--txt1);
+            border-color: var(--txt2);
+        }
+
+        /* ─── CHART PANELS ─── */
+        .chart-panel {
+            background: var(--bg1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .panel-hdr {
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--txt2);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .ch-info {
+            font-size: 11px;
+            color: var(--txt2);
+        }
+
+        /* ─── ANALYSIS GRID ─── */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        @media(max-width:900px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .card-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--txt2);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            margin-bottom: 12px;
+        }
+
+        /* signal */
+        .sig-wrap {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .sig-label {
+            font-size: 30px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .sig-label.STRONG_BUY {
+            color: #00e676;
+        }
+
+        .sig-label.BUY {
+            color: var(--green);
+        }
+
+        .sig-label.HOLD {
+            color: var(--yellow);
+        }
+
+        .sig-label.SELL {
+            color: var(--red);
+        }
+
+        .sig-label.STRONG_SELL {
+            color: #ff1744;
+        }
+
+        .sig-bar {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, #ff1744, #f85149, #d29922, #3fb950, #00e676);
+            border-radius: 4px;
+            position: relative;
+            margin: 8px 0;
+        }
+
+        .sig-dot {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px rgba(255, 255, 255, .5);
+            transition: left .5s ease;
+        }
+
+        .sig-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--txt2);
+        }
+
+        .sig-score {
+            font-size: 12px;
+            color: var(--txt2);
+            margin-top: 6px;
+        }
+
+        .sig-breakdown {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .sig-chip {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .sig-chip.b {
+            background: rgba(63, 185, 80, .2);
+            color: var(--green);
+        }
+
+        .sig-chip.n {
+            background: rgba(139, 148, 158, .15);
+            color: var(--txt2);
+        }
+
+        .sig-chip.s {
+            background: rgba(248, 81, 73, .2);
+            color: var(--red);
+        }
+
+        /* indicator rows */
+        .ind-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ind-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 10px;
+            background: var(--bg2);
+            border-radius: 5px;
+        }
+
+        .ir-name {
+            color: var(--txt2);
+            font-size: 12px;
+        }
+
+        .ir-val {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .ir-sig {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+
+        .ir-sig.b {
+            background: rgba(63, 185, 80, .2);
+            color: var(--green);
+        }
+
+        .ir-sig.n {
+            background: rgba(139, 148, 158, .15);
+            color: var(--txt2);
+        }
+
+        .ir-sig.s {
+            background: rgba(248, 81, 73, .2);
+            color: var(--red);
+        }
+
+        /* patterns */
+        .pat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .pat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            background: var(--bg2);
+            border-radius: 5px;
+        }
+
+        .pat-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .pat-dot.b {
+            background: var(--green);
+        }
+
+        .pat-dot.s {
+            background: var(--red);
+        }
+
+        .pat-dot.n {
+            background: var(--yellow);
+        }
+
+        /* loading / error */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            gap: 14px;
+            color: var(--txt2);
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .err-msg {
+            color: var(--red);
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+
+        /* footer */
+        footer {
+            text-align: center;
+            padding: 18px;
+            color: var(--txt2);
+            font-size: 11px;
+            border-top: 1px solid var(--border);
+            margin-top: 8px;
         }
     </style>
 </head>
 
 <body>
-    <h2>🚀 Loading US Stock Technical Analyzer...</h2>
-    <p>Redirecting to the fully functional server...</p>
-    <p>If you are not redirected automatically, <a href="https://us-stock-ta2.vercel.app/">click here</a>.</p>
+
+    <!-- ═══════════════════════ HEADER ═══════════════════════ -->
+    <header class="hdr">
+        <div class="logo">📈 <em>US</em><span>Stock</span>TA</div>
+        <div class="search-wrap">
+            <input id="ticker-input" type="text" placeholder="Ticker (e.g. AAPL)" value="AAPL" autocomplete="off"
+                spellcheck="false">
+            <button class="btn-analyze" onclick="go()">Analyze</button>
+        </div>
+        <div class="quick-tickers">
+            <span class="qt" onclick="go('AAPL')">AAPL</span>
+            <span class="qt" onclick="go('MSFT')">MSFT</span>
+            <span class="qt" onclick="go('GOOGL')">GOOGL</span>
+            <span class="qt" onclick="go('AMZN')">AMZN</span>
+            <span class="qt" onclick="go('NVDA')">NVDA</span>
+            <span class="qt" onclick="go('META')">META</span>
+            <span class="qt" onclick="go('TSLA')">TSLA</span>
+            <span class="qt" onclick="go('SPY')">SPY</span>
+            <span class="qt" onclick="go('QQQ')">QQQ</span>
+            <span class="qt" onclick="go('JPM')">JPM</span>
+            <span class="qt" onclick="go('GS')">GS</span>
+            <span class="qt" onclick="go('BRK-B')">BRK-B</span>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════ MAIN ═══════════════════════ -->
+    <div class="main">
+
+        <!-- Info Bar -->
+        <div class="info-bar">
+            <div class="info-left">
+                <div>
+                    <div class="info-symbol" id="i-sym">—</div>
+                    <div class="info-name" id="i-name">Loading...</div>
+                </div>
+                <div>
+                    <div class="info-price" id="i-price">—</div>
+                    <div class="info-chg chg-up" id="i-chg">—</div>
+                </div>
+            </div>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="ml">Open</div>
+                    <div class="mv" id="m-o">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">High</div>
+                    <div class="mv" id="m-h" style="color:var(--green)">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">Low</div>
+                    <div class="mv" id="m-l" style="color:var(--red)">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">Volume</div>
+                    <div class="mv" id="m-v">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">Avg Vol 20d</div>
+                    <div class="mv" id="m-av">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">Mkt Cap</div>
+                    <div class="mv" id="m-mc">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">52W High</div>
+                    <div class="mv" id="m-52h">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">52W Low</div>
+                    <div class="mv" id="m-52l">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">P/E</div>
+                    <div class="mv" id="m-pe">—</div>
+                </div>
+                <div class="metric">
+                    <div class="ml">Beta</div>
+                    <div class="mv" id="m-beta">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="ctrl-bar">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div class="tf-group" id="tf-group">
+                    <button class="tf" data-tf="5d" data-iv="5m" onclick="setTF(this)">5D</button>
+                    <button class="tf" data-tf="1mo" data-iv="1h" onclick="setTF(this)">1M</button>
+                    <button class="tf" data-tf="3mo" data-iv="1d" onclick="setTF(this)">3M</button>
+                    <button class="tf on" data-tf="6mo" data-iv="1d" onclick="setTF(this)">6M</button>
+                    <button class="tf" data-tf="1y" data-iv="1d" onclick="setTF(this)">1Y</button>
+                    <button class="tf" data-tf="2y" data-iv="1wk" onclick="setTF(this)">2Y</button>
+                    <button class="tf" data-tf="5y" data-iv="1wk" onclick="setTF(this)">5Y</button>
+                </div>
+                <div class="chart-type-group">
+                    <button class="ct-btn on" id="ct-candle" onclick="setChartType('candle')">Candle</button>
+                    <button class="ct-btn" id="ct-line" onclick="setChartType('line')">Line</button>
+                    <button class="ct-btn" id="ct-bar" onclick="setChartType('bar')">OHLC Bar</button>
+                </div>
+            </div>
+            <div class="ind-group">
+                <button class="ind-btn on" data-i="sma20" onclick="toggleInd(this)">SMA 20</button>
+                <button class="ind-btn on" data-i="sma50" onclick="toggleInd(this)">SMA 50</button>
+                <button class="ind-btn" data-i="ema20" onclick="toggleInd(this)">EMA 20</button>
+                <button class="ind-btn" data-i="ema50" onclick="toggleInd(this)">EMA 50</button>
+                <button class="ind-btn on" data-i="bb" onclick="toggleInd(this)">Bollinger</button>
+                <button class="ind-btn" data-i="vwap" onclick="toggleInd(this)">VWAP</button>
+            </div>
+        </div>
+
+        <!-- Main Price Chart -->
+        <div class="chart-panel">
+            <div class="panel-hdr">
+                <span class="panel-title" id="main-panel-title">PRICE & VOLUME</span>
+                <span class="ch-info" id="ch-ohlcv">Hover for OHLCV details</span>
+            </div>
+            <div id="main-chart"></div>
+        </div>
+
+        <!-- RSI -->
+        <div class="chart-panel">
+            <div class="panel-hdr">
+                <span class="panel-title">RSI (14) — Relative Strength Index</span>
+                <span class="ch-info">
+                    <span style="color:var(--red)">■ Overbought (70)</span> &nbsp;
+                    <span style="color:var(--green)">■ Oversold (30)</span> &nbsp;
+                    <span id="ch-rsi" style="color:var(--blue)">RSI: —</span>
+                </span>
+            </div>
+            <div id="rsi-chart"></div>
+        </div>
+
+        <!-- MACD -->
+        <div class="chart-panel">
+            <div class="panel-hdr">
+                <span class="panel-title">MACD (12,26,9)</span>
+                <span class="ch-info">
+                    <span style="color:var(--blue)">▬ MACD</span> &nbsp;
+                    <span style="color:#ff9500">▬ Signal</span> &nbsp;
+                    <span style="color:var(--green)">▮ Histogram</span> &nbsp;
+                    <span id="ch-macd" style="color:var(--txt2)">—</span>
+                </span>
+            </div>
+            <div id="macd-chart"></div>
+        </div>
+
+        <!-- Stochastic -->
+        <div class="chart-panel">
+            <div class="panel-hdr">
+                <span class="panel-title">Stochastic (14,3,3)</span>
+                <span class="ch-info">
+                    <span style="color:var(--blue)">▬ %K</span> &nbsp;
+                    <span style="color:#ff9500">▬ %D</span> &nbsp;
+                    <span style="color:var(--red)">■ Overbought (80)</span> &nbsp;
+                    <span style="color:var(--green)">■ Oversold (20)</span>
+                </span>
+            </div>
+            <div id="stoch-chart"></div>
+        </div>
+
+        <!-- Analysis Grid -->
+        <div class="analysis-grid">
+
+            <!-- Signal Card -->
+            <div class="card">
+                <div class="card-title">📊 Overall Signal</div>
+                <div class="sig-wrap">
+                    <div class="sig-label HOLD" id="sig-label">ANALYZING…</div>
+                    <div class="sig-bar">
+                        <div class="sig-dot" id="sig-dot" style="left:50%"></div>
+                    </div>
+                    <div class="sig-meta"><span>Strong Sell</span><span>Neutral</span><span>Strong Buy</span></div>
+                    <div class="sig-score" id="sig-score">Score: —</div>
+                    <div class="sig-breakdown" id="sig-breakdown"></div>
+                </div>
+            </div>
+
+            <!-- AI Summary Card -->
+            <div class="card" style="grid-column: 1 / -1; margin-top: -8px;">
+                <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🤖 AI Technical Summary</span>
+                    <button id="btn-ai" onclick="getAISummary()"
+                        style="padding:4px 10px; background:var(--blue); color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer;">Generate
+                        Report</button>
+                </div>
+                <div id="ai-summary-content"
+                    style="color:var(--txt1); font-size:13px; line-height:1.5; padding:8px 0; min-height:40px;">
+                    Click "Generate Report" to request an OpenAI summary of this stock.
+                </div>
+            </div>
+
+            <!-- Indicator Values -->
+            <div class="card">
+                <div class="card-title">🔢 Indicator Readings</div>
+                <div class="ind-rows">
+                    <div class="ind-row"><span class="ir-name">RSI (14)</span><span class="ir-val"
+                            id="v-rsi">—</span><span class="ir-sig n" id="s-rsi">—</span></div>
+                    <div class="ind-row"><span class="ir-name">MACD Line</span><span class="ir-val"
+                            id="v-macd">—</span><span class="ir-sig n" id="s-macd">—</span></div>
+                    <div class="ind-row"><span class="ir-name">MACD Histogram</span><span class="ir-val"
+                            id="v-hist">—</span><span class="ir-sig n" id="s-hist">—</span></div>
+                    <div class="ind-row"><span class="ir-name">Stochastic %K</span><span class="ir-val"
+                            id="v-stoch">—</span><span class="ir-sig n" id="s-stoch">—</span></div>
+                    <div class="ind-row"><span class="ir-name">SMA 20 / 50</span><span class="ir-val"
+                            id="v-sma">—</span><span class="ir-sig n" id="s-sma">—</span></div>
+                    <div class="ind-row"><span class="ir-name">Bollinger %B</span><span class="ir-val"
+                            id="v-bb">—</span><span class="ir-sig n" id="s-bb">—</span></div>
+                    <div class="ind-row"><span class="ir-name">Volume vs 20d Avg</span><span class="ir-val"
+                            id="v-vol">—</span><span class="ir-sig n" id="s-vol">—</span></div>
+                    <div class="ind-row"><span class="ir-name">ATR (14d)</span><span class="ir-val"
+                            id="v-atr">—</span><span class="ir-sig n" id="s-atr">—</span></div>
+                </div>
+            </div>
+
+            <!-- Patterns -->
+            <div class="card">
+                <div class="card-title">🕯️ Detected Patterns & Alerts</div>
+                <div class="pat-list" id="pat-list">
+                    <div class="pat-item">
+                        <div class="pat-dot n"></div><span>Loading patterns…</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            📈 US Stock Technical Analyzer &nbsp;|&nbsp; Data: Yahoo Finance &nbsp;|&nbsp;
+            For <strong>educational purposes only</strong> — not financial advice &nbsp;|&nbsp;
+            Indicators: SMA · EMA · RSI · MACD · Bollinger Bands · Stochastic · ATR · VWAP
+        </footer>
+    </div>
+
+    <!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
+    <script>
+        'use strict';
+
+        // ─── STATE ───────────────────────────────────────────────
+        let sym = 'AAPL', iv = '1d', rng = '6mo', chartType = 'candle';
+        let raw = null;
+        const IND = { sma20: true, sma50: true, ema20: false, ema50: false, bb: true, vwap: false };
+        let charts = {}, series = {};
+
+        async function fetchData(symbol, interval, range) {
+            // 1. Try to fetch from our Flask Backend (Vercel)
+            try {
+                const r = await fetch(`/api/stock?symbol=${symbol}&interval=${interval}&period=${range}`);
+                if (r.ok) {
+                    const data = await r.json();
+                    if (data && data.timestamps && data.timestamps.length > 0) {
+                        return data; // Success!
+                    }
+                }
+            } catch (e) {
+                console.warn("Backend fetch failed or was blocked. Falling back to client-side.", e);
+            }
+
+            // 2. Fallback: Client-side fetch directly from Yahoo Finance via proxy (Bypasses Vercel IP Block)
+            console.log("Vercel Backend blocked by Yahoo. Falling back to direct browser fetch...");
+            const base = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${interval}&range=${range}&includePrePost=false`;
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+                `https://corsproxy.io/?${encodeURIComponent(base)}`,
+                base
+            ];
+
+            let lastErr;
+            for (const url of proxies) {
+                try {
+                    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                    if (!r.ok) continue;
+                    const j = await r.json();
+                    if (j.chart?.error) throw new Error(j.chart.error.description);
+                    if (!j.chart?.result?.[0]) continue;
+
+                    const res = j.chart.result[0];
+                    const q = res.indicators.quote[0];
+
+                    // Adapt Yahoo's native format to exactly match our Flask API format!
+                    return {
+                        symbol: symbol,
+                        meta: res.meta,
+                        timestamps: res.timestamp,
+                        open: q.open || [],
+                        high: q.high || [],
+                        low: q.low || [],
+                        close: q.close || [],
+                        volume: q.volume || []
+                    };
+                } catch (e) { lastErr = e; }
+            }
+            throw lastErr || new Error('Both the Server Backend and Client Fallback failed to fetch data.');
+        }
+
+        // ─── TECHNICAL INDICATORS ─────────────────────────────────
+
+        function sma(arr, n) {
+            return arr.map((_, i) => {
+                if (i < n - 1) return null;
+                return arr.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n;
+            });
+        }
+
+        function ema(arr, n) {
+            const k = 2 / (n + 1); const res = Array(arr.length).fill(null);
+            let e = arr[0]; res[0] = e;
+            for (let i = 1; i < arr.length; i++) {
+                e = arr[i] * k + e * (1 - k);
+                if (i >= n - 1) res[i] = e;
+            }
+            return res;
+        }
+
+        function rsi(closes, n = 14) {
+            const res = Array(closes.length).fill(null);
+            let ag = 0, al = 0;
+            for (let i = 1; i <= n; i++) {
+                const d = closes[i] - closes[i - 1];
+                d > 0 ? ag += d : al += Math.abs(d);
+            }
+            ag /= n; al /= n;
+            for (let i = n; i < closes.length; i++) {
+                if (i === n) { res[i] = 100 - 100 / (1 + (ag / (al || 1e-9))); continue; }
+                const d = closes[i] - closes[i - 1];
+                ag = (ag * (n - 1) + (d > 0 ? d : 0)) / n;
+                al = (al * (n - 1) + (d < 0 ? Math.abs(d) : 0)) / n;
+                res[i] = 100 - 100 / (1 + (ag / (al || 1e-9)));
+            }
+            return res;
+        }
+
+        function macd(closes, fast = 12, slow = 26, sig = 9) {
+            const ef = ema(closes, fast), es = ema(closes, slow);
+            const ml = closes.map((_, i) => ef[i] != null && es[i] != null ? ef[i] - es[i] : null);
+            // signal as EMA of MACD values
+            const validML = ml.map(v => v ?? 0);
+            const sl_raw = ema(validML, sig);
+            const sl = ml.map((v, i) => v != null && i >= slow + sig - 2 ? sl_raw[i] : null);
+            const hist = ml.map((v, i) => v != null && sl[i] != null ? v - sl[i] : null);
+            return { ml, sl, hist };
+        }
+
+        function bollinger(closes, n = 20, mult = 2) {
+            const m = sma(closes, n);
+            return closes.map((_, i) => {
+                if (!m[i]) return null;
+                const sl = closes.slice(i - n + 1, i + 1);
+                const std = Math.sqrt(sl.reduce((a, v) => a + (v - m[i]) ** 2, 0) / n);
+                return { upper: m[i] + mult * std, mid: m[i], lower: m[i] - mult * std };
+            });
+        }
+
+        function stochastic(H, L, C, kp = 14, dp = 3) {
+            const K = C.map((_, i) => {
+                if (i < kp - 1) return null;
+                const hh = Math.max(...H.slice(i - kp + 1, i + 1));
+                const ll = Math.min(...L.slice(i - kp + 1, i + 1));
+                return hh === ll ? 50 : (C[i] - ll) / (hh - ll) * 100;
+            });
+            const D = sma(K.map(v => v ?? 0), dp);
+            return { K, D };
+        }
+
+        function atr(H, L, C, n = 14) {
+            const tr = C.map((_, i) => {
+                if (!i) return H[i] - L[i];
+                return Math.max(H[i] - L[i], Math.abs(H[i] - C[i - 1]), Math.abs(L[i] - C[i - 1]));
+            });
+            return sma(tr, n);
+        }
+
+        function vwap(T, H, L, C, V) {
+            let cvp = 0, cv = 0;
+            return C.map((_, i) => {
+                const tp = (H[i] + L[i] + C[i]) / 3;
+                cvp += tp * V[i]; cv += V[i];
+                return cv > 0 ? cvp / cv : null;
+            });
+        }
+
+        // ─── CHART INIT ───────────────────────────────────────────
+        function mkChart(el, h, margins) {
+            return LightweightCharts.createChart(el, {
+                layout: { background: { color: '#161b22' }, textColor: '#8b949e' },
+                grid: { vertLines: { color: '#21262d' }, horzLines: { color: '#21262d' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: '#30363d', scaleMargins: margins || { top: .1, bottom: .05 } },
+                timeScale: { borderColor: '#30363d', timeVisible: true, rightOffset: 5 },
+                height: h,
+            });
+        }
+
+        function destroyCharts() {
+            ['main', 'rsi', 'macd', 'stoch'].forEach(k => { if (charts[k]) { charts[k].remove(); delete charts[k]; } });
+            ['main-chart', 'rsi-chart', 'macd-chart', 'stoch-chart'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+            series = {};
+        }
+
+        function syncAll(src) {
+            src.timeScale().subscribeVisibleLogicalRangeChange(r => {
+                if (!r) return;
+                ['main', 'rsi', 'macd', 'stoch'].forEach(k => { if (charts[k] && charts[k] !== src) charts[k].timeScale().setVisibleLogicalRange(r); });
+            });
+        }
+
+        function toDate(ts) {
+            const d = new Date(ts * 1000);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // ─── RENDER ───────────────────────────────────────────────
+        function render(result) {
+            const ts = result.timestamps;
+            const meta = result.meta;
+
+            const valid = ts.map((t, i) => ({ t, o: result.open[i], h: result.high[i], l: result.low[i], c: result.close[i], v: result.volume[i] || 0 }))
+                .filter(d => (d.o !== null) && (d.h !== null) && (d.l !== null) && (d.c !== null));
+
+            const T = valid.map(d => d.t);
+            const O = valid.map(d => d.o);
+            const H = valid.map(d => d.h);
+            const L = valid.map(d => d.l);
+            const C = valid.map(d => d.c);
+            const V = valid.map(d => d.v);
+
+            // Compute indicators
+            const SMA20 = sma(C, 20), SMA50 = sma(C, 50);
+            const EMA20 = ema(C, 20), EMA50 = ema(C, 50);
+            const BB = bollinger(C, 20, 2);
+            const VWAP = vwap(T, H, L, C, V);
+            const RSI = rsi(C, 14);
+            const MACD = macd(C, 12, 26, 9);
+            const STOCH = stochastic(H, L, C, 14, 3);
+            const ATR = atr(H, L, C, 14);
+
+            const bld = (arr, scale = 1) => arr.map((v, i) => v != null ? { time: toDate(T[i]), value: v * scale } : null).filter(Boolean);
+
+            destroyCharts();
+            charts.main = mkChart(document.getElementById('main-chart'), 420, { top: .08, bottom: .22 });
+            charts.rsi = mkChart(document.getElementById('rsi-chart'), 140, { top: .05, bottom: .05 });
+            charts.macd = mkChart(document.getElementById('macd-chart'), 140, { top: .08, bottom: .08 });
+            charts.stoch = mkChart(document.getElementById('stoch-chart'), 130, { top: .05, bottom: .05 });
+
+            // Sync all timeScales
+            ['main', 'rsi', 'macd', 'stoch'].forEach(k => syncAll(charts[k]));
+
+            // ── Main series ──
+            if (chartType === 'candle') {
+                series.price = charts.main.addCandlestickSeries({
+                    upColor: '#3fb950', downColor: '#f85149',
+                    borderUpColor: '#3fb950', borderDownColor: '#f85149',
+                    wickUpColor: '#3fb950', wickDownColor: '#f85149',
+                });
+                series.price.setData(valid.map(d => ({ time: toDate(d.t), open: d.o, high: d.h, low: d.l, close: d.c })));
+            } else if (chartType === 'line') {
+                series.price = charts.main.addLineSeries({ color: '#58a6ff', lineWidth: 2 });
+                series.price.setData(bld(C));
+            } else {
+                series.price = charts.main.addBarSeries({
+                    upColor: '#3fb950', downColor: '#f85149',
+                });
+                series.price.setData(valid.map(d => ({ time: toDate(d.t), open: d.o, high: d.h, low: d.l, close: d.c })));
+            }
+
+            // Volume
+            series.vol = charts.main.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', scaleMargins: { top: .8, bottom: 0 } });
+            series.vol.setData(valid.map(d => ({ time: toDate(d.t), value: d.v, color: d.c >= d.o ? 'rgba(63,185,80,.3)' : 'rgba(248,81,73,.3)' })));
+
+            // Overlays
+            if (IND.sma20) { series.sma20 = charts.main.addLineSeries({ color: '#64d2ff', lineWidth: 1.5, title: 'SMA20' }); series.sma20.setData(bld(SMA20)); }
+            if (IND.sma50) { series.sma50 = charts.main.addLineSeries({ color: 'orange', lineWidth: 1.5, title: 'SMA50' }); series.sma50.setData(bld(SMA50)); }
+            if (IND.ema20) { series.ema20 = charts.main.addLineSeries({ color: '#ff64b4', lineWidth: 1.5, title: 'EMA20' }); series.ema20.setData(bld(EMA20)); }
+            if (IND.ema50) { series.ema50 = charts.main.addLineSeries({ color: '#bc8cff', lineWidth: 1.5, title: 'EMA50' }); series.ema50.setData(bld(EMA50)); }
+            if (IND.vwap) { series.vwap = charts.main.addLineSeries({ color: '#64ffb4', lineWidth: 1.5, lineStyle: 2, title: 'VWAP' }); series.vwap.setData(bld(VWAP)); }
+            if (IND.bb) {
+                series.bbU = charts.main.addLineSeries({ color: 'rgba(255,215,0,.55)', lineWidth: 1, title: 'BB+' });
+                series.bbM = charts.main.addLineSeries({ color: 'rgba(255,215,0,.35)', lineWidth: 1, lineStyle: 1, title: 'BB mid' });
+                series.bbL = charts.main.addLineSeries({ color: 'rgba(255,215,0,.55)', lineWidth: 1, title: 'BB-' });
+                series.bbU.setData(BB.map((v, i) => v ? { time: toDate(T[i]), value: v.upper } : null).filter(Boolean));
+                series.bbM.setData(BB.map((v, i) => v ? { time: toDate(T[i]), value: v.mid } : null).filter(Boolean));
+                series.bbL.setData(BB.map((v, i) => v ? { time: toDate(T[i]), value: v.lower } : null).filter(Boolean));
+            }
+
+            // ── RSI ──
+            series.rsi = charts.rsi.addLineSeries({ color: '#58a6ff', lineWidth: 2, title: 'RSI' });
+            series.rsi.setData(bld(RSI));
+            // horizontal levels
+            [[70, 'rgba(248,81,73,.4)'], [50, 'rgba(139,148,158,.25)'], [30, 'rgba(63,185,80,.4)']].forEach(([v, c]) => {
+                const s = charts.rsi.addLineSeries({ color: c, lineWidth: 1, lineStyle: 1 });
+                s.setData(bld(RSI).map(d => ({ ...d, value: v })));
+            });
+
+            // ── MACD ──
+            series.ml = charts.macd.addLineSeries({ color: '#58a6ff', lineWidth: 2, title: 'MACD' });
+            series.sl = charts.macd.addLineSeries({ color: '#ff9500', lineWidth: 1.5, title: 'Signal' });
+            series.mh = charts.macd.addHistogramSeries({ title: 'Hist' });
+            series.ml.setData(bld(MACD.ml));
+            series.sl.setData(bld(MACD.sl));
+            series.mh.setData(MACD.hist.map((v, i) => v != null ? {
+                time: toDate(T[i]), value: v,
+                color: v >= 0 ? (v > (MACD.hist[i - 1] || 0) ? '#3fb950' : '#1e7e34') : (v < (MACD.hist[i - 1] || 0) ? '#f85149' : '#8b2020')
+            } : null).filter(Boolean));
+
+            // ── Stochastic ──
+            series.stK = charts.stoch.addLineSeries({ color: '#58a6ff', lineWidth: 2, title: '%K' });
+            series.stD = charts.stoch.addLineSeries({ color: '#ff9500', lineWidth: 1.5, title: '%D' });
+            series.stK.setData(bld(STOCH.K));
+            series.stD.setData(bld(STOCH.D));
+            [[80, 'rgba(248,81,73,.35)'], [50, 'rgba(139,148,158,.2)'], [20, 'rgba(63,185,80,.35)']].forEach(([v, c]) => {
+                const s = charts.stoch.addLineSeries({ color: c, lineWidth: 1, lineStyle: 1 });
+                s.setData(bld(STOCH.K).map(d => ({ ...d, value: v })));
+            });
+
+            // Fit all
+            Object.values(charts).forEach(c => c.timeScale().fitContent());
+
+            // ── Crosshair (main) ──
+            charts.main.subscribeCrosshairMove(p => {
+                const d = p.seriesData?.get(series.price);
+                if (!d) return;
+                const el = document.getElementById('ch-ohlcv');
+                if (chartType === 'line') {
+                    el.innerHTML = `<b>$${d.value?.toFixed(2)}</b>`;
+                } else {
+                    el.innerHTML = `O:<b>$${d.open?.toFixed(2)}</b> H:<b style="color:#3fb950">$${d.high?.toFixed(2)}</b> L:<b style="color:#f85149">$${d.low?.toFixed(2)}</b> C:<b>$${d.close?.toFixed(2)}</b>`;
+                }
+            });
+            charts.rsi.subscribeCrosshairMove(p => {
+                const d = p.seriesData?.get(series.rsi);
+                if (d) document.getElementById('ch-rsi').textContent = `RSI: ${d.value?.toFixed(2)}`;
+            });
+            charts.macd.subscribeCrosshairMove(p => {
+                const ml = p.seriesData?.get(series.ml);
+                const sl = p.seriesData?.get(series.sl);
+                if (ml) document.getElementById('ch-macd').textContent = `MACD: ${ml.value?.toFixed(4)} | Sig: ${sl?.value?.toFixed(4) || '—'}`;
+            });
+
+            // ── Analysis ──
+            doAnalysis({ C, H, L, V, SMA20, SMA50, EMA20, EMA50, BB, VWAP, RSI, MACD, STOCH, ATR, meta });
+        }
+
+        // ─── ANALYSIS ─────────────────────────────────────────────
+        function doAnalysis({ C, H, L, V, SMA20, SMA50, EMA20, EMA50, BB, VWAP, RSI, MACD, STOCH, ATR, meta }) {
+            const i = C.length - 1;
+            const p = C[i];
+
+            let score = 0;
+            const chips = [];
+
+            // Helper: add score + chip
+            const vote = (val, label) => { score += val; chips.push({ val, label }); };
+
+            // 1. RSI
+            const rv = RSI[i];
+            let rsiSig = 'n', rsiTxt = 'Neutral';
+            if (rv != null) {
+                if (rv < 30) { vote(+25, 'RSI OS'); rsiSig = 'b'; rsiTxt = 'Oversold'; }
+                else if (rv < 45) { vote(+12, 'RSI Bll'); rsiSig = 'b'; rsiTxt = 'Bullish'; }
+                else if (rv > 70) { vote(-25, 'RSI OB'); rsiSig = 's'; rsiTxt = 'Overbought'; }
+                else if (rv > 55) { vote(-12, 'RSI Br'); rsiSig = 's'; rsiTxt = 'Bearish'; }
+                else { rsiTxt = 'Neutral'; }
+            }
+            set('rsi', rv?.toFixed(1) ?? '—', rsiSig, rsiTxt);
+
+            // 2. MACD
+            const mv = MACD.ml[i], sv = MACD.sl[i], hv = MACD.hist[i];
+            let macdSig = 'n', macdTxt = 'Neutral', histSig = 'n', histTxt = 'Neutral';
+            if (mv != null && sv != null) {
+                if (mv > sv && mv > 0) { vote(+20, 'MACD Bll'); macdSig = 'b'; macdTxt = 'Bullish'; }
+                else if (mv > sv) { vote(+10, 'MACD WBll'); macdSig = 'b'; macdTxt = 'Wk Bullish'; }
+                else if (mv < sv && mv < 0) { vote(-20, 'MACD Br'); macdSig = 's'; macdTxt = 'Bearish'; }
+                else { vote(-10, 'MACD WBr'); macdSig = 's'; macdTxt = 'Wk Bearish'; }
+            }
+            if (hv != null) {
+                const phv = MACD.hist[i - 1];
+                if (hv > 0 && hv > (phv || 0)) { histSig = 'b'; histTxt = 'Rising'; }
+                else if (hv > 0 && hv <= (phv || 0)) { histSig = 'n'; histTxt = 'Fading'; }
+                else if (hv < 0 && hv < (phv || 0)) { histSig = 's'; histTxt = 'Falling'; }
+                else { histSig = 'n'; histTxt = 'Recovering'; }
+            }
+            set('macd', mv?.toFixed(4) ?? '—', macdSig, macdTxt);
+            set('hist', hv?.toFixed(4) ?? '—', histSig, histTxt);
+
+            // 3. Stochastic
+            const kv = STOCH.K[i];
+            let stSig = 'n', stTxt = 'Neutral';
+            if (kv != null) {
+                if (kv < 20) { vote(+15, 'Stoch OS'); stSig = 'b'; stTxt = 'Oversold'; }
+                else if (kv > 80) { vote(-15, 'Stoch OB'); stSig = 's'; stTxt = 'Overbought'; }
+                else if (kv > 50) { stTxt = 'Bullish zone'; stSig = 'b'; }
+                else { stTxt = 'Bearish zone'; stSig = 's'; }
+            }
+            set('stoch', kv?.toFixed(1) ?? '—', stSig, stTxt);
+
+            // 4. SMA 20/50
+            const s2 = SMA20[i], s5 = SMA50[i], ps2 = SMA20[i - 1], ps5 = SMA50[i - 1];
+            let smaSig = 'n', smaTxt = 'No data';
+            if (s2 && s5) {
+                if (s2 > s5) { vote(+20, 'SMA Bll'); smaSig = 'b'; smaTxt = ps2 <= ps5 ? 'Golden Cross!' : 'Bullish Trend'; }
+                else { vote(-20, 'SMA Br'); smaSig = 's'; smaTxt = ps2 >= ps5 ? 'Death Cross!' : 'Bearish Trend'; }
+            }
+            const smaLabel = s2 && s5 ? `$${s2.toFixed(2)} / $${s5.toFixed(2)}` : '—';
+            set('sma', smaLabel, smaSig, smaTxt);
+
+            // 5. Bollinger %B
+            const bbv = BB[i];
+            let bbSig = 'n', bbTxt = 'Neutral', bbB = null;
+            if (bbv) {
+                bbB = (p - bbv.lower) / (bbv.upper - bbv.lower);
+                if (bbB < 0.1) { vote(+10, 'BB OS'); bbSig = 'b'; bbTxt = 'Near Lower (OS)'; }
+                else if (bbB > 0.9) { vote(-10, 'BB OB'); bbSig = 's'; bbTxt = 'Near Upper (OB)'; }
+                else if (bbB < 0.4) { bbSig = 'b'; bbTxt = 'Below Middle'; }
+                else if (bbB > 0.6) { bbSig = 's'; bbTxt = 'Above Middle'; }
+            }
+            set('bb', bbB != null ? `${(bbB * 100).toFixed(1)}%` : '—', bbSig, bbTxt);
+
+            // 6. Volume
+            const avgV = V.slice(-20).reduce((a, b) => a + b, 0) / 20;
+            const vr = V[i] / (avgV || 1);
+            let volSig = 'n', volTxt = 'Average';
+            if (vr > 2) { volSig = 'b'; volTxt = 'Very High'; }
+            else if (vr > 1.5) { volSig = 'b'; volTxt = 'High'; }
+            else if (vr < 0.5) { volSig = 's'; volTxt = 'Very Low'; }
+            else if (vr < 0.8) { volSig = 'n'; volTxt = 'Below Avg'; }
+            set('vol', `${vr.toFixed(2)}x`, volSig, volTxt);
+
+            // 7. ATR
+            const atrV = ATR[i];
+            const atrPct = atrV ? (atrV / p * 100) : 0;
+            let atrSig = 'n', atrTxt = atrPct > 3 ? 'High Volatility' : atrPct > 1.5 ? 'Normal' : 'Low Volatility';
+            set('atr', atrV ? `$${atrV.toFixed(2)} (${atrPct.toFixed(1)}%)` : '—', atrSig, atrTxt);
+
+            // Overall signal
+            score = Math.max(-100, Math.min(100, score));
+            let sigClass, sigText;
+            if (score >= 50) { sigText = 'STRONG BUY'; sigClass = 'STRONG_BUY'; }
+            else if (score >= 20) { sigText = 'BUY'; sigClass = 'BUY'; }
+            else if (score >= -20) { sigText = 'HOLD'; sigClass = 'HOLD'; }
+            else if (score >= -50) { sigText = 'SELL'; sigClass = 'SELL'; }
+            else { sigText = 'STRONG SELL'; sigClass = 'STRONG_SELL'; }
+
+            const el = id => document.getElementById(id);
+            el('sig-label').textContent = sigText;
+            el('sig-label').className = `sig-label ${sigClass}`;
+            el('sig-score').textContent = `Composite Score: ${score > 0 ? '+' : ''}${score} / 100`;
+            el('sig-dot').style.left = `${(score + 100) / 2}%`;
+
+            // Score chips
+            el('sig-breakdown').innerHTML = chips
+                .sort((a, b) => Math.abs(b.val) - Math.abs(a.val))
+                .slice(0, 6)
+                .map(c => `<span class="sig-chip ${c.val > 0 ? 'b' : c.val < 0 ? 's' : 'n'}">${c.label} ${c.val > 0 ? '+' : ''}${c.val}</span>`)
+                .join('');
+
+            // Patterns
+            detectPatterns(C, H, L, V, i, p, SMA20, SMA50, BB, MACD, RSI, STOCH, bbv);
+        }
+
+        function set(id, val, sig, txt) {
+            document.getElementById(`v-${id}`).textContent = val;
+            const s = document.getElementById(`s-${id}`);
+            s.textContent = txt; s.className = `ir-sig ${sig}`;
+        }
+
+        function detectPatterns(C, H, L, V, i, p, SMA20, SMA50, BB, MACD, RSI, STOCH, bbv) {
+            const pats = [];
+            const add = (type, text) => pats.push({ type, text });
+
+            // Golden / Death cross
+            if (SMA20[i] && SMA50[i] && SMA20[i - 1] && SMA50[i - 1]) {
+                if (SMA20[i] > SMA50[i] && SMA20[i - 1] <= SMA50[i - 1]) add('b', '✨ Golden Cross — SMA20 crossed above SMA50');
+                if (SMA20[i] < SMA50[i] && SMA20[i - 1] >= SMA50[i - 1]) add('s', '💀 Death Cross — SMA20 crossed below SMA50');
+            }
+
+            // MACD crossover
+            if (MACD.ml[i] != null && MACD.sl[i] != null && MACD.ml[i - 1] != null && MACD.sl[i - 1] != null) {
+                if (MACD.ml[i] > MACD.sl[i] && MACD.ml[i - 1] <= MACD.sl[i - 1]) add('b', '🔼 MACD Bullish Crossover');
+                if (MACD.ml[i] < MACD.sl[i] && MACD.ml[i - 1] >= MACD.sl[i - 1]) add('s', '🔽 MACD Bearish Crossover');
+            }
+
+            // RSI extremes
+            const rv = RSI[i];
+            if (rv != null) {
+                if (rv < 30) add('b', '📉 RSI Oversold (<30) — potential bounce zone');
+                if (rv > 70) add('s', '📈 RSI Overbought (>70) — potential pullback');
+                if (rv > 80) add('s', '🔴 RSI Extremely Overbought (>80)');
+                if (rv < 20) add('b', '🟢 RSI Extremely Oversold (<20)');
+            }
+
+            // Bollinger
+            if (bbv) {
+                const bw = (bbv.upper - bbv.lower) / bbv.mid;
+                if (bw < 0.04) add('n', '🔄 Bollinger Squeeze — low volatility, breakout imminent');
+                if (p < bbv.lower) add('b', '⬇️ Price below Lower Bollinger Band');
+                if (p > bbv.upper) add('s', '⬆️ Price above Upper Bollinger Band');
+            }
+
+            // Stochastic crossover
+            const kv = STOCH.K[i], dv = STOCH.D[i], kp = STOCH.K[i - 1], dp2 = STOCH.D[i - 1];
+            if (kv != null && dv != null && kp != null && dp2 != null) {
+                if (kv > dv && kp <= dp2 && kv < 20) add('b', '📊 Stochastic Bullish Crossover in oversold zone');
+                if (kv < dv && kp >= dp2 && kv > 80) add('s', '📊 Stochastic Bearish Crossover in overbought zone');
+            }
+
+            // 52-week proximity
+            const recent = C.slice(-252);
+            const h52 = Math.max(...recent), l52 = Math.min(...recent);
+            if (p > h52 * 0.99) add('b', '🚀 Near / At 52-Week High — breakout potential');
+            if (p < l52 * 1.01) add('s', '⚠️ Near / At 52-Week Low — support test');
+
+            // Volume spike
+            const avgV = V.slice(-20).reduce((a, b) => a + b, 0) / 20;
+            if (V[i] > avgV * 2.5) add('n', '📊 Volume Spike (>2.5× avg) — institutional activity');
+
+            // Inside bar
+            if (H[i] < H[i - 1] && L[i] > L[i - 1]) add('n', '🕯️ Inside Bar — consolidation / indecision');
+
+            // Price vs SMA20
+            if (SMA20[i]) {
+                if (p > SMA20[i] * 1.08) add('s', '📏 Price 8%+ above SMA20 — extended, watch for pullback');
+                if (p < SMA20[i] * 0.92) add('b', '📏 Price 8%+ below SMA20 — mean-reversion opportunity');
+            }
+
+            // Price trend (3-day)
+            if (i >= 3) {
+                const t3 = (C[i] - C[i - 3]) / C[i - 3] * 100;
+                if (t3 > 5) add('b', `📈 3-day momentum: +${t3.toFixed(1)}%`);
+                if (t3 < -5) add('s', `📉 3-day momentum: ${t3.toFixed(1)}%`);
+            }
+
+            if (!pats.length) add('n', '➡️ No significant patterns detected — ranging market');
+
+            document.getElementById('pat-list').innerHTML = pats.slice(0, 9)
+                .map(p => `<div class="pat-item"><div class="pat-dot ${p.type}"></div><span>${p.text}</span></div>`)
+                .join('');
+        }
+
+        // ─── STOCK INFO ───────────────────────────────────────────
+        function updateInfo(result) {
+            const m = result.meta;
+            const closes = result.close.filter(v => v !== null);
+            const vols = result.volume.filter(v => v !== null);
+
+            const price = m.regularMarketPrice || closes.at(-1);
+            const prev = m.previousClose || m.chartPreviousClose;
+            const chg = price - prev, pct = chg / prev * 100;
+
+            ge('i-sym').textContent = m.symbol;
+            ge('i-name').textContent = m.longName || m.shortName || m.symbol;
+            ge('i-price').textContent = `$${price.toFixed(2)}`;
+            const ce = ge('i-chg');
+            ce.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`;
+            ce.className = `info-chg ${chg >= 0 ? 'chg-up' : 'chg-dn'}`;
+
+            const q0 = result.open.filter(v => v !== null);
+            ge('m-o').textContent = q0.length ? `$${q0.at(-1).toFixed(2)}` : '—';
+            ge('m-h').textContent = `$${Math.max(...result.high.filter(v => v !== null).slice(-1)).toFixed(2)}`;
+            ge('m-l').textContent = `$${Math.min(...result.low.filter(v => v !== null).slice(-1)).toFixed(2)}`;
+            ge('m-v').textContent = fmtN(vols.at(-1));
+            ge('m-av').textContent = fmtN(vols.slice(-20).reduce((a, b) => a + b, 0) / 20);
+            ge('m-mc').textContent = m.marketCap ? '$' + fmtN(m.marketCap) : '—';
+            ge('m-52h').textContent = m.fiftyTwoWeekHigh ? `$${m.fiftyTwoWeekHigh.toFixed(2)}` : '—';
+            ge('m-52l').textContent = m.fiftyTwoWeekLow ? `$${m.fiftyTwoWeekLow.toFixed(2)}` : '—';
+            ge('m-pe').textContent = m.trailingPE ? m.trailingPE.toFixed(2) : '—';
+            ge('m-beta').textContent = m.beta ? m.beta.toFixed(2) : '—';
+        }
+
+        function fmtN(n) {
+            if (!n || isNaN(n)) return '—';
+            if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toFixed(0);
+        }
+        const ge = id => document.getElementById(id);
+
+        // ─── LOADING / ERROR ──────────────────────────────────────
+        function showLoad() {
+            ['main-chart', 'rsi-chart', 'macd-chart', 'stoch-chart'].forEach(id => {
+                ge(id).innerHTML = `<div class="loading"><div class="spinner"></div><div>Fetching market data for ${sym}…</div></div>`;
+            });
+        }
+
+        // ─── MAIN LOAD ────────────────────────────────────────────
+        async function go(ticker) {
+            if (ticker) { sym = ticker.toUpperCase(); ge('ticker-input').value = sym; }
+            else { const v = ge('ticker-input').value.trim().toUpperCase(); if (!v) return; sym = v; }
+
+            showLoad();
+
+            try {
+                raw = await fetchData(sym, iv, rng);
+                updateInfo(raw);
+                render(raw);
+            } catch (e) {
+                ge('main-chart').innerHTML = `<div class="err-msg">⚠️ ${e.message}<br><small>Check the ticker symbol or try a different one.</small></div>`;
+                console.error(e);
+            }
+        }
+
+        function setTF(btn) {
+            document.querySelectorAll('.tf').forEach(b => b.classList.remove('on'));
+            btn.classList.add('on');
+            iv = btn.dataset.iv; rng = btn.dataset.tf;
+            if (raw) go();
+        }
+
+        function toggleInd(btn) {
+            const k = btn.dataset.i;
+            IND[k] = !IND[k];
+            btn.classList.toggle('on', IND[k]);
+            if (raw) render(raw);
+        }
+
+        function setChartType(type) {
+            chartType = type;
+            ['candle', 'line', 'bar'].forEach(t => ge(`ct-${t}`).classList.toggle('on', t === type));
+            if (raw) render(raw);
+        }
+
+        // ─── AI SUMMARY ──────────────────────────────────────
+        async function getAISummary() {
+            if (!raw) return;
+            const btn = ge('btn-ai');
+            const box = ge('ai-summary-content');
+            btn.disabled = true;
+            btn.textContent = "Analyzing...";
+            box.textContent = "Asking AI for technical insights...";
+
+            // Gather current readings from the DOM (or variables)
+            const indData = {
+                RSI: ge('v-rsi').textContent,
+                MACD: ge('v-macd').textContent,
+                Stochastic: ge('v-stoch').textContent,
+                SMA_Cross: ge('v-sma').textContent,
+                Bollinger: ge('v-bb').textContent,
+                Overall_Signal: ge('sig-label').textContent,
+                Score: ge('sig-score').textContent
+            };
+
+            try {
+                const r = await fetch('/api/ai-summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: sym, indicators: indData })
+                });
+
+                if (!r.ok) {
+                    const err = await r.json();
+                    throw new Error(err.error || 'Failed to generate AI summary');
+                }
+                const res = await r.json();
+                box.innerHTML = `<em>${res.summary}</em>`;
+            } catch (e) {
+                box.innerHTML = `<span style="color:var(--red)">⚠️ API Error: ${e.message}. Ensure OPENAI_API_KEY is set in your environment.</span>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Generate Report";
+            }
+        }
+
+        // keyboard
+        ge('ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+
+        // ─── BOOT ─────────────────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => go());
+    </script>
 </body>
 
 </html>
